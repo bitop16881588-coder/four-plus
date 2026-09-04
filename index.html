@@ -280,12 +280,41 @@
 .x-field-label{font-size:10.5px;font-weight:700;color:#A0704F;letter-spacing:.5px}
 /* 長文字：自動換行、保留斷行 */
 .x-field-val{font-size:13px;color:#3E2F28;line-height:1.6;white-space:normal;word-break:break-word;overflow-wrap:anywhere}
+.x-rcard-head{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.x-rcard-head-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.x-rcard-head-caret{flex:0 0 auto;font-size:13px;color:#A0704F;transition:transform .18s;margin-top:3px}
+.x-rcard.x-open .x-rcard-head-caret{transform:rotate(90deg)}
+.x-rcard-collapsible .x-rcard-head:hover .x-rcard-title{color:#A0704F}
+.x-rcard-body{display:flex;flex-direction:column;gap:7px;margin-top:9px}
+.x-rcard-body.x-collapsed{display:none}
+.x-title-row{display:flex;align-items:flex-start;gap:7px}
+.x-title-row .x-rcard-title{flex:1;min-width:0}
+.x-reddot{flex:0 0 auto;width:15px;height:15px;border-radius:50%;background:#E5484D;border:2px solid #fff;box-shadow:0 0 0 1px #E5484D,0 1px 3px rgba(0,0,0,.25);cursor:pointer;padding:0;margin-top:2px;transition:.12s}
+.x-reddot:hover{transform:scale(1.2)}
+.x-reddot.on{box-shadow:0 0 0 3px rgba(229,72,77,.35),0 1px 3px rgba(0,0,0,.25)}
+.x-reddot-panel{margin-top:9px;background:#FDECEC;border:1px solid #F3C0C0;border-left:3px solid #E5484D;border-radius:9px;padding:8px 11px;font-size:12.5px;line-height:1.6;color:#7a2b2e;white-space:normal;word-break:break-word;overflow-wrap:anywhere}
+.x-reddot-panel.x-collapsed{display:none}
+.x-reddot-panel .x-rdp-label{display:block;font-weight:800;font-size:11px;color:#E5484D;margin-bottom:3px;letter-spacing:.5px}
 .x-note-wrap{margin-top:3px;border-top:1px solid #E4DCCF;padding-top:8px}
-.x-note-label{font-size:11px;font-weight:800;color:#A0704F;margin-bottom:3px}
-.x-note-ta{width:100%;min-height:36px;border:1.5px dashed #D8C9BC;border-radius:9px;padding:6px 9px;font:inherit;font-size:13px;color:#3E2F28;line-height:1.5;resize:vertical;background:#FBF7F0;outline:none}
+.x-note-toggle{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:11.5px;font-weight:800;color:#A0704F;background:#F1E9DE;border:1px solid #E4DCCF;border-radius:8px;padding:4px 11px;cursor:pointer;transition:.12s}
+.x-note-toggle:hover{background:#EFE3D6}
+.x-note-toggle .x-note-caret{transition:transform .15s;font-size:10px;color:#A0704F}
+.x-note-toggle.open .x-note-caret{transform:rotate(90deg)}
+.x-note-toggle .x-note-dot{width:6px;height:6px;border-radius:50%;background:#B5364A;display:none}
+.x-note-toggle.has-note .x-note-dot{display:inline-block}
+.x-note-ta{width:100%;min-height:40px;margin-top:6px;border:1.5px dashed #D8C9BC;border-radius:9px;padding:6px 9px;font:inherit;font-size:13px;color:#3E2F28;line-height:1.5;resize:vertical;background:#FBF7F0;outline:none}
 .x-note-ta:focus{border-color:#A0704F;border-style:solid;background:#fff}
+.x-note-ta.x-collapsed{display:none}
 .x-divider-band{grid-column:1/-1;text-align:center;font-weight:800;font-size:12.5px;color:#A0704F;background:#F1E9DE;border:1px dashed #D8C9BC;border-radius:10px;padding:7px 10px;letter-spacing:1px}
 .x-rcard-empty{grid-column:1/-1;color:#7A655A;text-align:center;padding:30px;font-size:14px}
+</style>
+
+<style id="tabsort-style">
+.x-drag-tab{cursor:grab;touch-action:none;-webkit-user-select:none;user-select:none}
+.x-drag-tab:active{cursor:grabbing}
+.x-drag-tab.x-dragging{opacity:.55;cursor:grabbing !important;transform:scale(.95);box-shadow:0 8px 20px rgba(62,47,40,.28);position:relative;z-index:5}
+.x-bar-dragging{cursor:grabbing}
+.x-bar-dragging *{cursor:grabbing !important}
 </style>
 </head>
 <body class="min-h-screen pb-16">
@@ -898,6 +927,7 @@
             <div class="gzsf-bar">
               <div class="gzsf-subtabs" id="gz-subtabs"></div>
               <input class="gzsf-search" id="gz-search" placeholder="搜尋规章内容…" autocomplete="off">
+              <button class="gzsf-sub" id="gz-expand-all" type="button">全部展開</button>
               <span class="gzsf-count" id="gz-count"></span>
             </div>
             <div class="x-rcard-grid" id="gz-grid"></div>
@@ -908,6 +938,7 @@
           <div class="gzsf-wrap">
             <div class="gzsf-bar">
               <input class="gzsf-search" id="sf-search" placeholder="搜尋三方通道…" autocomplete="off">
+              <button class="gzsf-sub" id="sf-expand-all" type="button">全部展開</button>
               <span class="gzsf-count" id="sf-count"></span>
             </div>
             <div class="x-rcard-grid" id="sf-grid"></div>
@@ -4953,28 +4984,78 @@
       var dim=/不使用|停用|暂不|暫不|退押/.test(status+owner+name)?' dim':'';
       var noteKey=opts.notePrefix+'::'+(name||('#'+ri));
       var search=esc(row.join(' ').toLowerCase());
-      var h='<div class="x-rcard'+dim+'" data-search="'+search+'">';
-      h+='<div class="x-rcard-title">'+esc(name||'(未命名)')+'</div>';
       var tags='';
       if(owner) tags+='<span class="x-tag">'+esc(owner)+'</span>';
-      if(status) tags+='<span class="x-tag '+(/已开跑|已開跑|使用中|营业|營業/.test(status)?'ok':(/停用|不使用|维护|維護/.test(status)?'warn':'')+'')+'">'+esc(status)+'</span>';
-      if(tags) h+='<div class="x-rcard-tags">'+tags+'</div>';
+      if(status) tags+='<span class="x-tag '+(/已开跑|已開跑|使用中|营业|營業/.test(status)?'ok':(/停用|不使用|维护|維護/.test(status)?'warn':''))+'">'+esc(status)+'</span>';
+      var tagsHTML=tags?('<div class="x-rcard-tags">'+tags+'</div>'):'';
+      var redVal='', redFoundIdx=-1, redLabel=opts.redDotLabel||'';
+      if(opts.redDotTest){
+        for(var _rc=0;_rc<row.length;_rc++){
+          if(_rc===titleIdx||_rc===ownerIdx) continue;
+          var _cv=(row[_rc]||'').trim();
+          if(_cv && opts.redDotTest.test(_cv)){ redVal=_cv; redFoundIdx=_rc; break; }
+        }
+      }
+      var redDotBtn=redVal?'<button type="button" class="x-reddot" title="'+esc(redLabel)+'（點開）"></button>':'';
+      var titleRow='<div class="x-title-row"><div class="x-rcard-title">'+esc(name||'(未命名)')+'</div>'+redDotBtn+'</div>';
+      var redPanel=redVal?'<div class="x-reddot-panel x-collapsed"><span class="x-rdp-label">🔴 '+esc(redLabel)+'</span>'+valHTML(redVal)+'</div>':'';
+      var fieldsHTML='';
       headers.forEach(function(hd,ci){
-        if(ci===titleIdx||ci===ownerIdx||ci===statusIdx) return;
+        if(ci===titleIdx||ci===ownerIdx||ci===statusIdx||ci===redFoundIdx) return;
         var v=(row[ci]||'').trim(); if(!v) return;
-        h+='<div class="x-field"><div class="x-field-label">'+esc(hd)+'</div><div class="x-field-val">'+valHTML(v)+'</div></div>';
+        fieldsHTML+='<div class="x-field"><div class="x-field-label">'+esc(hd)+'</div><div class="x-field-val">'+valHTML(v)+'</div></div>';
       });
-      h+='<div class="x-note-wrap"><div class="x-note-label">📝 备注</div>'
-        +'<textarea class="x-note-ta" data-note="'+esc(noteKey)+'" placeholder="輸入备注（自動儲存）…">'+esc(getNote(noteKey))+'</textarea></div>';
-      h+='</div>';
+      var _hasNote=!!getNote(noteKey).trim();
+      var noteHTML='<div class="x-note-wrap">'
+        +'<button type="button" class="x-note-toggle'+(_hasNote?' open has-note':'')+'"><span>📝 备注</span><span class="x-note-dot"></span><span class="x-note-caret">▸</span></button>'
+        +'<textarea class="x-note-ta'+(_hasNote?'':' x-collapsed')+'" data-note="'+esc(noteKey)+'" placeholder="輸入备注（自動儲存）…">'+esc(getNote(noteKey))+'</textarea></div>';
+      var h;
+      if(opts.collapsible){
+        h='<div class="x-rcard x-rcard-collapsible'+dim+'" data-search="'+search+'">'
+          +'<div class="x-rcard-head"><div class="x-rcard-head-main">'+titleRow+tagsHTML+'</div><span class="x-rcard-head-caret">▸</span></div>'
+          +redPanel
+          +'<div class="x-rcard-body x-collapsed">'+fieldsHTML+noteHTML+'</div>'
+          +'</div>';
+      } else {
+        h='<div class="x-rcard'+dim+'" data-search="'+search+'">'+titleRow+tagsHTML+redPanel+fieldsHTML+noteHTML+'</div>';
+      }
       out+=h;
     });
     return out;
   }
   function wireNotes(grid){
+    grid.querySelectorAll('.x-rcard-head').forEach(function(head){
+      head.addEventListener('click',function(){
+        var card=head.parentNode, body=card.querySelector('.x-rcard-body');
+        if(!body) return;
+        var collapsed=body.classList.toggle('x-collapsed');
+        card.classList.toggle('x-open',!collapsed);
+      });
+    });
+    grid.querySelectorAll('.x-reddot').forEach(function(dot){
+      dot.addEventListener('click',function(ev){
+        ev.stopPropagation();
+        var card=dot.closest('.x-rcard'), panel=card&&card.querySelector('.x-reddot-panel');
+        if(!panel) return;
+        var collapsed=panel.classList.toggle('x-collapsed');
+        dot.classList.toggle('on',!collapsed);
+      });
+    });
+    grid.querySelectorAll('.x-note-toggle').forEach(function(btn){
+      btn.addEventListener('click',function(){
+        var ta=btn.parentNode.querySelector('.x-note-ta');
+        var collapsed=ta.classList.toggle('x-collapsed');
+        btn.classList.toggle('open',!collapsed);
+        if(!collapsed){ try{ta.focus();}catch(e){} }
+      });
+    });
     grid.querySelectorAll('.x-note-ta').forEach(function(ta){
-      var t=null;
-      ta.addEventListener('input',function(){clearTimeout(t);var k=ta.getAttribute('data-note'),v=ta.value;t=setTimeout(function(){setNote(k,v);},300);});
+      var t=null, btn=ta.parentNode.querySelector('.x-note-toggle');
+      ta.addEventListener('input',function(){
+        clearTimeout(t);var k=ta.getAttribute('data-note'),v=ta.value;
+        if(btn) btn.classList.toggle('has-note', v.trim()!=='');
+        t=setTimeout(function(){setNote(k,v);},300);
+      });
       ta.addEventListener('blur',function(){setNote(ta.getAttribute('data-note'),ta.value);});
     });
   }
@@ -4984,6 +5065,10 @@
     cards.forEach(function(c){
       var hit=!q || (c.getAttribute('data-search')||'').indexOf(q)>=0;
       c.style.display=hit?'':'none'; if(hit)shown++;
+      var body=c.querySelector('.x-rcard-body');
+      if(body){ if(q){ if(hit){body.classList.remove('x-collapsed');c.classList.add('x-open');} } else { body.classList.add('x-collapsed'); c.classList.remove('x-open'); } }
+      var rp=c.querySelector('.x-reddot-panel'), rd=c.querySelector('.x-reddot');
+      if(rp){ if(q&&hit){ rp.classList.remove('x-collapsed'); if(rd)rd.classList.add('on'); } else if(!q){ rp.classList.add('x-collapsed'); if(rd)rd.classList.remove('on'); } }
     });
     // 過濾時隱藏分隔帶
     grid.querySelectorAll('.x-divider-band').forEach(function(d){ d.style.display=q?'none':''; });
@@ -5002,25 +5087,38 @@
     renderGZSection();
   }
   function renderGZSection(){
+    var _b=$('gz-expand-all'); if(_b) _b.textContent='全部展開';
     var sec=GZ_SEED[gzCur];
     var headers=sec.rows[0], data=sec.rows.slice(1);
     var grid=$('gz-grid');
-    grid.innerHTML=buildCards(headers,data,{titleKeys:['飞机名称','商户名','名称'],ownerKey:'代理',statusKey:'對接狀況',notePrefix:'gz_'+sec.name})||'<div class="x-rcard-empty">沒有資料</div>';
+    grid.innerHTML=buildCards(headers,data,{titleKeys:['飞机名称','商户名','名称'],ownerKey:'代理',statusKey:'對接狀況',notePrefix:'gz_'+sec.name,collapsible:true})||'<div class="x-rcard-empty">沒有資料</div>';
     wireNotes(grid);
     applyFilter(grid,$('gz-search').value,$('gz-count'));
   }
   $('gz-search').addEventListener('input',function(){applyFilter($('gz-grid'),this.value,$('gz-count'));});
+  $('gz-expand-all').addEventListener('click',function(){
+    var grid=$('gz-grid'); var expand=!!grid.querySelector('.x-rcard-body.x-collapsed');
+    grid.querySelectorAll('.x-rcard-body').forEach(function(b){ b.classList.toggle('x-collapsed', !expand); });
+    grid.querySelectorAll('.x-rcard-collapsible').forEach(function(c){ c.classList.toggle('x-open', expand); });
+    this.textContent = expand ? '全部收起' : '全部展開';
+  });
 
   /* ---------- 三方 ---------- */
   var sfRendered=false;
   function renderSF(){
     var headers=SF_SEED[0], data=SF_SEED.slice(1);
     var grid=$('sf-grid');
-    grid.innerHTML=buildCards(headers,data,{titleKeys:['名称'],ownerKey:'归属',statusKey:'使用状况',notePrefix:'sf'})||'<div class="x-rcard-empty">沒有資料</div>';
+    grid.innerHTML=buildCards(headers,data,{titleKeys:['名称'],ownerKey:'归属',statusKey:'',notePrefix:'sf',collapsible:true,redDotTest:/商户充值|商户提款|商户转余额|商戶充值/,redDotLabel:'商户充值'})||'<div class="x-rcard-empty">沒有資料</div>';
     wireNotes(grid);
     applyFilter(grid,$('sf-search').value,$('sf-count'));
   }
   $('sf-search').addEventListener('input',function(){applyFilter($('sf-grid'),this.value,$('sf-count'));});
+  $('sf-expand-all').addEventListener('click',function(){
+    var grid=$('sf-grid'); var expand=!!grid.querySelector('.x-rcard-body.x-collapsed');
+    grid.querySelectorAll('.x-rcard-body').forEach(function(b){ b.classList.toggle('x-collapsed', !expand); });
+    grid.querySelectorAll('.x-rcard-collapsible').forEach(function(c){ c.classList.toggle('x-open', expand); });
+    this.textContent = expand ? '全部收起' : '全部展開';
+  });
 
   /* ---------- 分頁切換（與既有六分頁共存） ---------- */
   function hideMyPanels(){ ['guizhang','sanfang'].forEach(function(t){var p=$('main-tab-'+t); if(p)p.classList.add('hidden');}); }
@@ -5045,6 +5143,76 @@
   ['summary','details','vcotc','notebook','switchlog','auditlog'].forEach(function(t){
     var b=$('tab-btn-'+t); if(b) b.addEventListener('click',function(){ hideMyPanels(); deactivateMyBtns(); });
   });
+})();
+</script>
+
+
+<script>
+/* ===== 上方分頁列：可拖曳排序（grab 手勢 + 記住順序） ===== */
+(function(){
+  "use strict";
+  function init(){
+    var anchor=document.getElementById('tab-btn-summary');
+    if(!anchor) return;
+    var bar=anchor.parentNode;
+    var KEY='x_tab_order_v1';
+    function tabs(){ return Array.prototype.filter.call(bar.children,function(el){return el.tagName==='BUTTON';}); }
+    // 套用已存排序
+    try{
+      var saved=JSON.parse(localStorage.getItem(KEY)||'null');
+      if(Array.isArray(saved)){
+        var map={}; tabs().forEach(function(b){ if(b.id) map[b.id]=b; });
+        saved.forEach(function(id){ if(map[id]) bar.appendChild(map[id]); });
+        tabs().forEach(function(b){ if(saved.indexOf(b.id)<0) bar.appendChild(b); }); // 新分頁排最後
+      }
+    }catch(e){}
+    function saveOrder(){ try{ localStorage.setItem(KEY, JSON.stringify(tabs().map(function(b){return b.id;}))); }catch(e){} }
+    // 標記可拖曳（grab 手勢）
+    tabs().forEach(function(b){ b.classList.add('x-drag-tab'); });
+
+    var dragBtn=null, dragging=false, sx=0, sy=0, pid=null;
+    bar.addEventListener('pointerdown', function(e){
+      var b=e.target.closest ? e.target.closest('button') : null;
+      if(!b || b.parentNode!==bar) return;
+      dragBtn=b; dragging=false; sx=e.clientX; sy=e.clientY; pid=e.pointerId;
+    });
+    document.addEventListener('pointermove', function(e){
+      if(!dragBtn || e.pointerId!==pid) return;
+      var dx=e.clientX-sx, dy=e.clientY-sy;
+      if(!dragging){
+        if(Math.abs(dx)<6 && Math.abs(dy)<6) return; // 未達門檻 → 當作點擊
+        dragging=true;
+        dragBtn.classList.add('x-dragging');
+        bar.classList.add('x-bar-dragging');
+        try{ dragBtn.setPointerCapture(e.pointerId); }catch(_){}
+      }
+      var over=document.elementFromPoint(e.clientX, e.clientY);
+      over = over && over.closest ? over.closest('button') : null;
+      if(over && over!==dragBtn && over.parentNode===bar){
+        var r=over.getBoundingClientRect();
+        if(e.clientX < r.left + r.width/2) bar.insertBefore(dragBtn, over);
+        else bar.insertBefore(dragBtn, over.nextSibling);
+      }
+    });
+    function endDrag(e){
+      if(!dragBtn) return;
+      var b=dragBtn, wasDragging=dragging;
+      if(wasDragging){
+        b.classList.remove('x-dragging');
+        bar.classList.remove('x-bar-dragging');
+        saveOrder();
+        // 抑制拖曳後緊接的 click（避免誤切換分頁）
+        var kill=function(ev){ ev.stopPropagation(); ev.preventDefault(); };
+        b.addEventListener('click', kill, true);
+        setTimeout(function(){ try{ b.removeEventListener('click', kill, true); }catch(_){} }, 60);
+      }
+      dragBtn=null; dragging=false; pid=null;
+    }
+    document.addEventListener('pointerup', endDrag);
+    document.addEventListener('pointercancel', endDrag);
+  }
+  if(document.readyState!=='loading') init();
+  else document.addEventListener('DOMContentLoaded', init);
 })();
 </script>
 
